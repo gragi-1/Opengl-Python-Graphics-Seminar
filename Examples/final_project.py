@@ -11,13 +11,19 @@ Features
     (via additive blending), and a semi-transparent cloud layer that
     rotates at a different speed to the surface.
   * Saturn has a textured ring (alpha-blended from saturn_ring.png).
+  * Milky Way panorama mapped onto a large inverted skysphere as a
+    photographic backdrop behind all scene geometry.
   * A dense starfield of ~2 500 stars that twinkle smoothly (random phase +
-    sinusoidal brightness oscillation).
+    sinusoidal brightness oscillation) layered on top of the backdrop.
   * Point-light source at the Sun position so day/night shading is physical.
   * The Moon orbits Earth with tidal locking.
   * Interactive camera: arrow keys orbit, +/- zoom, H resets.
   * Smooth time-based animation using high-resolution elapsed time.
   * Orbit lines drawn as faint coloured circles for each planet.
+  * Orbital planes are tilted to their real astronomical inclinations and
+    ascending nodes (J2000 epoch) so each orbit ring sits at its correct
+    angle relative to the ecliptic.  Mercury's 7-degree tilt is clearly
+    visible; the outer planets show subtler but physically accurate offsets.
 
 Conventions
 -----------
@@ -57,6 +63,24 @@ except NameError:
     _FONT = ctypes.c_void_p(+8)
 
 # ---------------------------------------------------------------------------
+#  Base directory for resource loading (PyInstaller compatibility)
+# ---------------------------------------------------------------------------
+# When frozen into a .exe, PyInstaller extracts data files into a temp
+# folder referenced by sys._MEIPASS.  When running from source the base
+# is one level up from the Examples/ directory (the repo root).
+if getattr(sys, 'frozen', False):
+    _BASE_DIR = sys._MEIPASS                       # type: ignore[attr-defined]
+else:
+    _BASE_DIR = os.path.join(os.path.dirname(__file__), os.pardir)
+_BASE_DIR = os.path.abspath(_BASE_DIR)
+
+
+def _res(relative_path):
+    """Resolve a repo-relative path to an absolute path."""
+    return os.path.join(_BASE_DIR, relative_path)
+
+
+# ---------------------------------------------------------------------------
 #  Window / projection constants
 # ---------------------------------------------------------------------------
 WINDOW_W, WINDOW_H = +1400, +850
@@ -65,22 +89,23 @@ FAR_PLANE   = +5000.0
 FOV_Y       = +45.0  # degrees -- gluPerspective expects degrees
 
 # ---------------------------------------------------------------------------
-#  Texture paths (relative to repo root)
+#  Texture paths (resolved via _res for source and frozen .exe)
 # ---------------------------------------------------------------------------
-TEX_SUN          = "img/sun.jpg"
-TEX_MERCURY      = "img/mercury.jpg"
-TEX_VENUS        = "img/venus.jpg"
-TEX_VENUS_ATMO   = "img/venus_athmosfere.jpg"
-TEX_EARTH_DAY    = "img/earth.jpg"
-TEX_EARTH_NIGHT  = "img/earth_night.jpg"
-TEX_EARTH_CLOUDS = "img/earth_clouds.jpg"
-TEX_MOON         = "img/moon.jpg"
-TEX_MARS         = "img/mars.jpg"
-TEX_JUPITER      = "img/jupiter.jpg"
-TEX_SATURN       = "img/saturn.jpg"
-TEX_SATURN_RING  = "img/saturn_ring.png"
-TEX_URANUS       = "img/uranus.jpg"
-TEX_NEPTUNE      = "img/neptune.jpg"
+TEX_SUN          = _res("img/sun.jpg")
+TEX_MERCURY      = _res("img/mercury.jpg")
+TEX_VENUS        = _res("img/venus.jpg")
+TEX_VENUS_ATMO   = _res("img/venus_athmosfere.jpg")
+TEX_EARTH_DAY    = _res("img/earth.jpg")
+TEX_EARTH_NIGHT  = _res("img/earth_night.jpg")
+TEX_EARTH_CLOUDS = _res("img/earth_clouds.jpg")
+TEX_MOON         = _res("img/moon.jpg")
+TEX_MARS         = _res("img/mars.jpg")
+TEX_JUPITER      = _res("img/jupiter.jpg")
+TEX_SATURN       = _res("img/saturn.jpg")
+TEX_SATURN_RING  = _res("img/saturn_ring.png")
+TEX_URANUS       = _res("img/uranus.jpg")
+TEX_NEPTUNE      = _res("img/neptune.jpg")
+TEX_MILKY_WAY    = _res("img/milky_way.jpg")
 
 # ---------------------------------------------------------------------------
 #  Sphere detail (slices / stacks)
@@ -157,10 +182,39 @@ TILT_URANUS  = +97.77 * math.pi / +180.0  # Uranus is sideways!
 TILT_NEPTUNE = +28.32 * math.pi / +180.0
 
 # ---------------------------------------------------------------------------
+#  Orbital inclinations to the ecliptic (radians)
+#  Real astronomical values -- Earth is the reference plane at 0 deg.
+# ---------------------------------------------------------------------------
+INCL_MERCURY = +7.005 * math.pi / +180.0
+INCL_VENUS   = +3.395 * math.pi / +180.0
+INCL_EARTH   = +0.0
+INCL_MARS    = +1.848 * math.pi / +180.0
+INCL_JUPITER = +1.303 * math.pi / +180.0
+INCL_SATURN  = +2.489 * math.pi / +180.0
+INCL_URANUS  = +0.773 * math.pi / +180.0
+INCL_NEPTUNE = +1.770 * math.pi / +180.0
+INCL_MOON    = +5.145 * math.pi / +180.0   # to the ecliptic
+
+# ---------------------------------------------------------------------------
+#  Longitude of ascending node (radians, J2000 epoch)
+#  Determines the direction in which each orbital plane is tilted.
+# ---------------------------------------------------------------------------
+NODE_MERCURY = +48.331  * math.pi / +180.0
+NODE_VENUS   = +76.680  * math.pi / +180.0
+NODE_EARTH   = +0.0
+NODE_MARS    = +49.558  * math.pi / +180.0
+NODE_JUPITER = +100.464 * math.pi / +180.0
+NODE_SATURN  = +113.665 * math.pi / +180.0
+NODE_URANUS  = +74.006  * math.pi / +180.0
+NODE_NEPTUNE = +131.784 * math.pi / +180.0
+NODE_MOON    = +125.08  * math.pi / +180.0  # mean value (precesses)
+
+# ---------------------------------------------------------------------------
 #  Starfield parameters
 # ---------------------------------------------------------------------------
 NUM_STARS              = +2500
 STAR_SPHERE_RADIUS     = +2000.0
+SKY_SPHERE_RADIUS      = +2500.0   # Milky Way backdrop (behind stars)
 STAR_TWINKLE_SPEED_MIN = +0.5   # radians / second
 STAR_TWINKLE_SPEED_MAX = +3.0
 STAR_MIN_BRIGHTNESS    = +0.25
@@ -237,6 +291,7 @@ dl_saturn_ring = None
 dl_uranus      = None
 dl_neptune     = None
 dl_glow        = None   # plain sphere used for Sun corona glow
+dl_milky_way   = None   # inverted skysphere for Milky Way backdrop
 
 
 # ===================================================================
@@ -402,6 +457,41 @@ def build_glow_list():
 
 
 # ===================================================================
+#  Milky Way skysphere
+# ===================================================================
+
+def build_sky_sphere_list(filepath, radius):
+    """Create a display list for a large inverted sphere textured with the
+    Milky Way panorama.
+
+    The sphere faces *inward* (normals reversed via gluQuadricOrientation)
+    so the texture is visible from inside.  It is drawn without lighting
+    to act as a static photographic backdrop behind everything else.
+    """
+    dl = glGenLists(+1)
+    q = gluNewQuadric()
+    gluQuadricDrawStyle(q, GLU_FILL)
+    gluQuadricNormals(q, GLU_SMOOTH)
+    gluQuadricTexture(q, GL_TRUE)
+    gluQuadricOrientation(q, GLU_INSIDE)   # normals point inward
+
+    tex_id = load_texture(filepath)
+
+    glNewList(dl, GL_COMPILE)
+    glEnable(GL_TEXTURE_2D)
+    glBindTexture(GL_TEXTURE_2D, tex_id)
+    glPushMatrix()
+    glRotatef(-90.0, +1.0, +0.0, +0.0)    # poles on Y
+    gluSphere(q, radius, +64, +64)
+    glPopMatrix()
+    glDisable(GL_TEXTURE_2D)
+    glEndList()
+
+    gluDeleteQuadric(q)
+    return dl
+
+
+# ===================================================================
 #  Starfield
 # ===================================================================
 
@@ -491,8 +581,13 @@ def draw_starfield(t):
 #  Orbit trails
 # ===================================================================
 
-def draw_orbit_ring(radius, r, g, b):
-    """Draw a faint, anti-aliased circle of given *radius* in the XZ plane."""
+def draw_orbit_ring(radius, r, g, b, incl_rad=+0.0, node_rad=+0.0):
+    """Draw a faint, anti-aliased orbit circle tilted to the correct plane.
+
+    The ring is drawn in the XZ plane and then rotated by *node_rad*
+    (ascending node) around Y followed by *incl_rad* (inclination)
+    around X so it sits at the real orbital tilt.
+    """
     glDisable(GL_TEXTURE_2D)
     glDisable(GL_LIGHTING)
     glEnable(GL_BLEND)
@@ -501,12 +596,19 @@ def draw_orbit_ring(radius, r, g, b):
     glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
     glLineWidth(+1.2)
 
+    glPushMatrix()
+    # Tilt the drawing plane to match the real orbital inclination
+    glRotatef(math.degrees(node_rad), +0.0, +1.0, +0.0)
+    glRotatef(math.degrees(incl_rad), +1.0, +0.0, +0.0)
+
     glBegin(GL_LINE_LOOP)
     glColor4f(r, g, b, ORBIT_ALPHA)
     for i in range(ORBIT_SEGMENTS):
         theta = +2.0 * math.pi * i / ORBIT_SEGMENTS
         glVertex3f(radius * math.cos(theta), +0.0, radius * math.sin(theta))
     glEnd()
+
+    glPopMatrix()
 
     glLineWidth(+1.0)
     glDisable(GL_LINE_SMOOTH)
@@ -515,19 +617,19 @@ def draw_orbit_ring(radius, r, g, b):
 
 def draw_all_orbits():
     """Draw orbit paths for every planet around the Sun."""
-    # (radius, r, g, b) -- subtle colour hints per planet
+    # (radius, r, g, b, inclination, ascending_node)
     orbits = [
-        (D_MERCURY, +0.7, +0.7, +0.7),
-        (D_VENUS,   +0.9, +0.7, +0.4),
-        (D_EARTH,   +0.3, +0.5, +0.9),
-        (D_MARS,    +0.9, +0.4, +0.3),
-        (D_JUPITER, +0.8, +0.7, +0.5),
-        (D_SATURN,  +0.8, +0.8, +0.5),
-        (D_URANUS,  +0.5, +0.8, +0.9),
-        (D_NEPTUNE, +0.3, +0.4, +0.9),
+        (D_MERCURY, +0.7, +0.7, +0.7, INCL_MERCURY, NODE_MERCURY),
+        (D_VENUS,   +0.9, +0.7, +0.4, INCL_VENUS,   NODE_VENUS),
+        (D_EARTH,   +0.3, +0.5, +0.9, INCL_EARTH,   NODE_EARTH),
+        (D_MARS,    +0.9, +0.4, +0.3, INCL_MARS,     NODE_MARS),
+        (D_JUPITER, +0.8, +0.7, +0.5, INCL_JUPITER,  NODE_JUPITER),
+        (D_SATURN,  +0.8, +0.8, +0.5, INCL_SATURN,   NODE_SATURN),
+        (D_URANUS,  +0.5, +0.8, +0.9, INCL_URANUS,   NODE_URANUS),
+        (D_NEPTUNE, +0.3, +0.4, +0.9, INCL_NEPTUNE,  NODE_NEPTUNE),
     ]
-    for dist, r, g, b in orbits:
-        draw_orbit_ring(dist, r, g, b)
+    for dist, r, g, b, incl, node in orbits:
+        draw_orbit_ring(dist, r, g, b, incl, node)
 
 
 # ===================================================================
@@ -566,7 +668,8 @@ def setup_lighting():
 # ===================================================================
 
 def draw_planet(orbit_angle, orbit_radius, spin_angle, tilt_rad,
-                display_list, axial_tilt_axis=(+0.0, +0.0, +1.0)):
+                display_list, axial_tilt_axis=(+0.0, +0.0, +1.0),
+                incl_rad=+0.0, node_rad=+0.0):
     """Draw a planet at its orbital position with axial tilt and spin.
 
     Parameters
@@ -577,8 +680,14 @@ def draw_planet(orbit_angle, orbit_radius, spin_angle, tilt_rad,
     tilt_rad : float      Axial tilt in radians.
     display_list : int    GL display list for the textured sphere.
     axial_tilt_axis : tuple  Axis around which to apply axial tilt.
+    incl_rad : float      Orbital inclination to the ecliptic (radians).
+    node_rad : float      Longitude of ascending node (radians).
     """
     glPushMatrix()
+
+    # 0) Tilt the orbital plane to its real inclination
+    glRotatef(math.degrees(node_rad), +0.0, +1.0, +0.0)
+    glRotatef(math.degrees(incl_rad), +1.0, +0.0, +0.0)
 
     # 1) Orbit: rotate frame around Y then translate outward
     glRotatef(math.degrees(orbit_angle), +0.0, +1.0, +0.0)
@@ -613,6 +722,10 @@ def draw_earth():
        rotates at a different speed, giving the illusion of weather.
     """
     glPushMatrix()
+
+    # -- Tilt orbital plane to true inclination --------------------------
+    glRotatef(math.degrees(NODE_EARTH), +0.0, +1.0, +0.0)
+    glRotatef(math.degrees(INCL_EARTH), +1.0, +0.0, +0.0)
 
     # -- Move to Earth's orbital position --------------------------------
     glRotatef(math.degrees(angle_earth_orb), +0.0, +1.0, +0.0)
@@ -677,6 +790,10 @@ def draw_moon():
     """
     glPushMatrix()
 
+    # Tilt the Moon's orbital plane (inclined ~5.1 deg to the ecliptic)
+    glRotatef(math.degrees(NODE_MOON), +0.0, +1.0, +0.0)
+    glRotatef(math.degrees(INCL_MOON), +1.0, +0.0, +0.0)
+
     # Orbit around Earth (local Y)
     glRotatef(math.degrees(angle_moon_orb), +0.0, +1.0, +0.0)
     glTranslatef(D_MOON, +0.0, +0.0)
@@ -697,6 +814,10 @@ def draw_moon():
 def draw_saturn():
     """Draw Saturn with its tilted ring system."""
     glPushMatrix()
+
+    # Tilt the orbital plane to true inclination
+    glRotatef(math.degrees(NODE_SATURN), +0.0, +1.0, +0.0)
+    glRotatef(math.degrees(INCL_SATURN), +1.0, +0.0, +0.0)
 
     # Orbit
     glRotatef(math.degrees(angle_saturn_orb), +0.0, +1.0, +0.0)
@@ -894,7 +1015,14 @@ def display():
     glRotatef(math.degrees(cam_pitch), +1.0, +0.0, +0.0)
     glRotatef(math.degrees(cam_yaw),   +0.0, +1.0, +0.0)
 
-    # -- Starfield (behind everything, no lighting) ----------------------
+    # -- Milky Way backdrop (furthest layer, no lighting) ----------------
+    glDisable(GL_LIGHTING)
+    glDisable(GL_DEPTH_TEST)             # always behind everything
+    glColor3f(+1.0, +1.0, +1.0)
+    glCallList(dl_milky_way)
+    glEnable(GL_DEPTH_TEST)
+
+    # -- Starfield (twinkling points on top of the backdrop) --------------
     t = glutGet(GLUT_ELAPSED_TIME) / +1000.0
     draw_starfield(t)
 
@@ -939,33 +1067,39 @@ def display():
 
     # -- Mercury ---------------------------------------------------------
     draw_planet(angle_mercury_orb, D_MERCURY, angle_mercury_spin,
-                +0.0, dl_mercury)
+                +0.0, dl_mercury,
+                incl_rad=INCL_MERCURY, node_rad=NODE_MERCURY)
 
     # -- Venus -----------------------------------------------------------
     draw_planet(angle_venus_orb, D_VENUS, angle_venus_spin,
-                +0.0, dl_venus)
+                +0.0, dl_venus,
+                incl_rad=INCL_VENUS, node_rad=NODE_VENUS)
 
     # -- Earth (custom renderer for day/night/clouds/moon) ---------------
     draw_earth()
 
     # -- Mars ------------------------------------------------------------
     draw_planet(angle_mars_orb, D_MARS, angle_mars_spin,
-                TILT_MARS, dl_mars)
+                TILT_MARS, dl_mars,
+                incl_rad=INCL_MARS, node_rad=NODE_MARS)
 
     # -- Jupiter ---------------------------------------------------------
     draw_planet(angle_jupiter_orb, D_JUPITER, angle_jupiter_spin,
-                +0.0, dl_jupiter)
+                +0.0, dl_jupiter,
+                incl_rad=INCL_JUPITER, node_rad=NODE_JUPITER)
 
     # -- Saturn (custom renderer for ring) -------------------------------
     draw_saturn()
 
     # -- Uranus (extreme axial tilt ~98 deg) ----------------------------
     draw_planet(angle_uranus_orb, D_URANUS, angle_uranus_spin,
-                TILT_URANUS, dl_uranus)
+                TILT_URANUS, dl_uranus,
+                incl_rad=INCL_URANUS, node_rad=NODE_URANUS)
 
     # -- Neptune ---------------------------------------------------------
     draw_planet(angle_neptune_orb, D_NEPTUNE, angle_neptune_spin,
-                TILT_NEPTUNE, dl_neptune)
+                TILT_NEPTUNE, dl_neptune,
+                incl_rad=INCL_NEPTUNE, node_rad=NODE_NEPTUNE)
 
     glDisable(GL_LIGHTING)
 
@@ -1037,7 +1171,7 @@ def main():
     global dl_sun, dl_mercury, dl_venus
     global dl_earth_day, dl_earth_night, dl_earth_cloud, dl_moon
     global dl_mars, dl_jupiter, dl_saturn, dl_saturn_ring
-    global dl_uranus, dl_neptune, dl_glow
+    global dl_uranus, dl_neptune, dl_glow, dl_milky_way
 
     # -- GLUT setup ------------------------------------------------------
     glutInit(sys.argv)
@@ -1071,7 +1205,8 @@ def main():
     dl_saturn  = build_sphere_list(TEX_SATURN,  R_SATURN)
     dl_saturn_ring = build_ring_list(TEX_SATURN_RING,
                                      SATURN_RING_INNER, SATURN_RING_OUTER)
-    dl_glow    = build_glow_list()
+    dl_glow      = build_glow_list()
+    dl_milky_way = build_sky_sphere_list(TEX_MILKY_WAY, SKY_SPHERE_RADIUS)
     dl_uranus  = build_sphere_list(TEX_URANUS,  R_URANUS)
     dl_neptune = build_sphere_list(TEX_NEPTUNE, R_NEPTUNE)
     print("All textures loaded.")
