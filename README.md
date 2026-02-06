@@ -18,9 +18,9 @@ A hands-on collection of progressive OpenGL examples written in Python with **Py
 |   |-- 05_textured_polygon.py          # Texture on an N-sided polygon + wrap modes
 |   |-- 06_textured_perspective.py      # Textured square in 3D perspective (gluPerspective)
 |   |-- 07_textured_planes_matrices.py  # Two planes: self-spin + orbit (push/pop matrix)
-|   \\-- 08_dual_orbit_cubes.py          # Two textured cubes orbiting in XY and XZ planes
+|   \\-- 08_dual_orbit_cubes.py         # Two textured cubes orbiting in XY and XZ planes
 |-- img/
-|   \\-- box.jpg                         # Sample texture used by examples 04-08
+|   \\-- box.jpg                        # Sample texture used by examples 04-08
 |-- LICENSE                             # MIT License
 \\-- README.md
 ```
