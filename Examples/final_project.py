@@ -10,7 +10,9 @@ Features
   * Earth has three layers: day-side texture, night-side city-lights texture
     (via additive blending), and a semi-transparent cloud layer that
     rotates at a different speed to the surface.
-  * Saturn has a textured ring (alpha-blended from saturn_ring.png).
+  * Saturn has a textured ring (alpha-blended from saturn_ring.png) that
+    rotates at its own mean Keplerian angular velocity in the equatorial
+    plane, independent of the planet's surface spin.
   * Milky Way panorama mapped onto a large inverted skysphere as a
     photographic backdrop behind all scene geometry.
   * A dense starfield of ~2 500 stars that twinkle smoothly (random phase +
@@ -69,7 +71,7 @@ except NameError:
 # folder referenced by sys._MEIPASS.  When running from source the base
 # is one level up from the Examples/ directory (the repo root).
 if getattr(sys, 'frozen', False):
-    _BASE_DIR = sys._MEIPASS                       # type: ignore[attr-defined]
+    _BASE_DIR = sys._MEIPASS
 else:
     _BASE_DIR = os.path.join(os.path.dirname(__file__), os.pardir)
 _BASE_DIR = os.path.abspath(_BASE_DIR)
@@ -86,7 +88,7 @@ def _res(relative_path):
 WINDOW_W, WINDOW_H = +1400, +850
 NEAR_PLANE  = +1.0
 FAR_PLANE   = +5000.0
-FOV_Y       = +45.0  # degrees -- gluPerspective expects degrees
+FOV_Y       = +45.0
 
 # ---------------------------------------------------------------------------
 #  Texture paths (resolved via _res for source and frozen .exe)
@@ -163,13 +165,14 @@ W_NEPTUNE_ORBIT = +2.0 * math.pi / +220.0
 # ---------------------------------------------------------------------------
 W_SUN_SPIN     = +2.0 * math.pi / +25.0
 W_MERCURY_SPIN = +2.0 * math.pi / +20.0
-W_VENUS_SPIN   = -2.0 * math.pi / +35.0   # Venus rotates retrograde!
+W_VENUS_SPIN   = -2.0 * math.pi / +35.0
 W_EARTH_SPIN   = +2.0 * math.pi / +3.0
-W_CLOUD_SPIN   = +2.0 * math.pi / +4.5    # clouds drift faster than surface
+W_CLOUD_SPIN   = +2.0 * math.pi / +4.5
 W_MARS_SPIN    = +2.0 * math.pi / +3.1
-W_JUPITER_SPIN = +2.0 * math.pi / +1.5    # Jupiter spins fast
-W_SATURN_SPIN  = +2.0 * math.pi / +1.7
-W_URANUS_SPIN  = -2.0 * math.pi / +2.8    # Uranus also retrograde
+W_JUPITER_SPIN = +2.0 * math.pi / +1.5
+W_SATURN_SPIN      = +2.0 * math.pi / +1.7
+W_SATURN_RING_SPIN = +2.0 * math.pi / +2.2
+W_URANUS_SPIN  = -2.0 * math.pi / +2.8
 W_NEPTUNE_SPIN = +2.0 * math.pi / +2.5
 
 # ---------------------------------------------------------------------------
@@ -178,7 +181,7 @@ W_NEPTUNE_SPIN = +2.0 * math.pi / +2.5
 TILT_EARTH   = +23.44 * math.pi / +180.0
 TILT_MARS    = +25.19 * math.pi / +180.0
 TILT_SATURN  = +26.73 * math.pi / +180.0
-TILT_URANUS  = +97.77 * math.pi / +180.0  # Uranus is sideways!
+TILT_URANUS  = +97.77 * math.pi / +180.0
 TILT_NEPTUNE = +28.32 * math.pi / +180.0
 
 # ---------------------------------------------------------------------------
@@ -193,10 +196,10 @@ INCL_JUPITER = +1.303 * math.pi / +180.0
 INCL_SATURN  = +2.489 * math.pi / +180.0
 INCL_URANUS  = +0.773 * math.pi / +180.0
 INCL_NEPTUNE = +1.770 * math.pi / +180.0
-INCL_MOON    = +5.145 * math.pi / +180.0   # to the ecliptic
+INCL_MOON    = +5.145 * math.pi / +180.0
 
 # ---------------------------------------------------------------------------
-#  Longitude of ascending node (radians, J2000 epoch)
+#  Longitude of ascending node (radians)
 #  Determines the direction in which each orbital plane is tilted.
 # ---------------------------------------------------------------------------
 NODE_MERCURY = +48.331  * math.pi / +180.0
@@ -207,15 +210,15 @@ NODE_JUPITER = +100.464 * math.pi / +180.0
 NODE_SATURN  = +113.665 * math.pi / +180.0
 NODE_URANUS  = +74.006  * math.pi / +180.0
 NODE_NEPTUNE = +131.784 * math.pi / +180.0
-NODE_MOON    = +125.08  * math.pi / +180.0  # mean value (precesses)
+NODE_MOON    = +125.08  * math.pi / +180.0
 
 # ---------------------------------------------------------------------------
 #  Starfield parameters
 # ---------------------------------------------------------------------------
 NUM_STARS              = +2500
 STAR_SPHERE_RADIUS     = +2000.0
-SKY_SPHERE_RADIUS      = +2500.0   # Milky Way backdrop (behind stars)
-STAR_TWINKLE_SPEED_MIN = +0.5   # radians / second
+SKY_SPHERE_RADIUS      = +2500.0
+STAR_TWINKLE_SPEED_MIN = +0.5
 STAR_TWINKLE_SPEED_MAX = +3.0
 STAR_MIN_BRIGHTNESS    = +0.25
 STAR_MAX_BRIGHTNESS    = +1.0
@@ -224,11 +227,11 @@ STAR_MAX_BRIGHTNESS    = +1.0
 #  Camera defaults
 # ---------------------------------------------------------------------------
 CAM_DEFAULT_DIST  = -280.0
-CAM_DEFAULT_YAW   = +0.0       # radians
-CAM_DEFAULT_PITCH = +0.35      # radians (~20 deg down)
-CAM_YAW_SPEED     = +2.0       # radians / second while key held
+CAM_DEFAULT_YAW   = +0.0
+CAM_DEFAULT_PITCH = +0.35
+CAM_YAW_SPEED     = +2.0
 CAM_PITCH_SPEED   = +1.5
-CAM_ZOOM_SPEED    = +80.0      # units / second
+CAM_ZOOM_SPEED    = +80.0
 CAM_MIN_DIST      = -50.0
 CAM_MAX_DIST      = -800.0
 
@@ -250,6 +253,7 @@ angle_moon_orb     = +0.0
 angle_mars_orb     = +0.0;  angle_mars_spin    = +0.0
 angle_jupiter_orb  = +0.0;  angle_jupiter_spin = +0.0
 angle_saturn_orb   = +0.0;  angle_saturn_spin  = +0.0
+angle_saturn_ring  = +0.0
 angle_uranus_orb   = +0.0;  angle_uranus_spin  = +0.0
 angle_neptune_orb  = +0.0;  angle_neptune_spin = +0.0
 
@@ -290,8 +294,8 @@ dl_saturn      = None
 dl_saturn_ring = None
 dl_uranus      = None
 dl_neptune     = None
-dl_glow        = None   # plain sphere used for Sun corona glow
-dl_milky_way   = None   # inverted skysphere for Milky Way backdrop
+dl_glow        = None
+dl_milky_way   = None
 
 
 # ===================================================================
@@ -322,7 +326,7 @@ def load_texture(filepath, has_alpha=False, alpha_from_luminance=False):
     if alpha_from_luminance:
         # Build RGBA where A = luminance of the pixel
         img_rgb = img.convert("RGB")
-        lum = img.convert("L")           # grayscale = perceived brightness
+        lum = img.convert("L")
         img = Image.merge("RGBA", (*img_rgb.split(), lum))
         raw = img.tobytes("raw", "RGBA", +0, -1)
         gl_fmt = GL_RGBA
@@ -375,9 +379,6 @@ def build_sphere_list(filepath, radius, has_alpha=False,
     glNewList(dl, GL_COMPILE)
     glEnable(GL_TEXTURE_2D)
     glBindTexture(GL_TEXTURE_2D, tex_id)
-    # gluSphere places its poles on the Z-axis.  Rotate -90 deg around X
-    # so the poles align with Y (the "up" direction in our world) and
-    # textures wrap horizontally around the equator as expected.
     glPushMatrix()
     glRotatef(-90.0, +1.0, +0.0, +0.0)
     gluSphere(q, radius, SPHERE_SLICES, SPHERE_STACKS)
@@ -473,7 +474,7 @@ def build_sky_sphere_list(filepath, radius):
     gluQuadricDrawStyle(q, GLU_FILL)
     gluQuadricNormals(q, GLU_SMOOTH)
     gluQuadricTexture(q, GL_TRUE)
-    gluQuadricOrientation(q, GLU_INSIDE)   # normals point inward
+    gluQuadricOrientation(q, GLU_INSIDE)
 
     tex_id = load_texture(filepath)
 
@@ -481,7 +482,7 @@ def build_sky_sphere_list(filepath, radius):
     glEnable(GL_TEXTURE_2D)
     glBindTexture(GL_TEXTURE_2D, tex_id)
     glPushMatrix()
-    glRotatef(-90.0, +1.0, +0.0, +0.0)    # poles on Y
+    glRotatef(-90.0, +1.0, +0.0, +0.0)
     gluSphere(q, radius, +64, +64)
     glPopMatrix()
     glDisable(GL_TEXTURE_2D)
@@ -545,9 +546,9 @@ def draw_starfield(t):
 
     # Three size buckets for visual depth: (min_base, max_base, point_size)
     buckets = [
-        (+0.0, +1.5, +1.2),   # small dim stars
-        (+1.5, +2.0, +2.2),   # medium stars
-        (+2.0, +3.0, +3.5),   # large bright stars
+        (+0.0, +1.5, +1.2),
+        (+1.5, +2.0, +2.2),
+        (+2.0, +3.0, +3.5),
     ]
 
     for lo, hi, pt_size in buckets:
@@ -701,7 +702,7 @@ def draw_planet(orbit_angle, orbit_radius, spin_angle, tilt_rad,
     # 3) Self-rotation around the (now tilted) local Y axis
     glRotatef(math.degrees(spin_angle), +0.0, +1.0, +0.0)
 
-    glColor3f(+1.0, +1.0, +1.0)  # neutral colour so texture is not tinted
+    glColor3f(+1.0, +1.0, +1.0)
     glCallList(display_list)
 
     glPopMatrix()
@@ -749,15 +750,15 @@ def draw_earth():
     # night texture "shows through"; where it is bright (day side)
     # the additive contribution is visually negligible.
     glEnable(GL_BLEND)
-    glBlendFunc(GL_ONE, GL_ONE)  # additive
-    glDisable(GL_LIGHTING)       # night lights are emissive
-    glDepthFunc(GL_LEQUAL)       # draw on same depth as day sphere
+    glBlendFunc(GL_ONE, GL_ONE)
+    glDisable(GL_LIGHTING)
+    glDepthFunc(GL_LEQUAL)
     glCallList(dl_earth_night)
     glDepthFunc(GL_LESS)
     glDisable(GL_BLEND)
     glEnable(GL_LIGHTING)
 
-    glPopMatrix()  # back to orbital position (no tilt/spin)
+    glPopMatrix()
 
     # Layer 3: Clouds -- slightly larger sphere, semi-transparent,
     # own rotation speed
@@ -770,17 +771,17 @@ def draw_earth():
     # Per-pixel alpha (from luminance) makes clouds opaque and clear sky
     # transparent.  Vertex alpha provides an overall softness multiplier.
     glColor4f(+1.0, +1.0, +1.0, +0.75)
-    glDepthMask(GL_FALSE)                # don't write to depth buffer
+    glDepthMask(GL_FALSE)
     glCallList(dl_earth_cloud)
     glDepthMask(GL_TRUE)
     glDisable(GL_BLEND)
 
-    glPopMatrix()  # back to orbital position
+    glPopMatrix()
 
     # -- Moon ------------------------------------------------------------
     draw_moon()
 
-    glPopMatrix()  # back to world origin
+    glPopMatrix()
 
 
 def draw_moon():
@@ -812,7 +813,13 @@ def draw_moon():
 # ===================================================================
 
 def draw_saturn():
-    """Draw Saturn with its tilted ring system."""
+    """Draw Saturn with its tilted ring system.
+
+    The ring sits in Saturn's equatorial plane and rotates at its own
+    mean Keplerian angular velocity (different from the planet's surface
+    spin).  Inner ring particles orbit faster, outer ones slower; we use
+    a single intermediate rate as a visual approximation.
+    """
     glPushMatrix()
 
     # Tilt the orbital plane to true inclination
@@ -823,19 +830,22 @@ def draw_saturn():
     glRotatef(math.degrees(angle_saturn_orb), +0.0, +1.0, +0.0)
     glTranslatef(D_SATURN, +0.0, +0.0)
 
-    # Axial tilt
+    # Axial tilt (shared by planet body and ring)
     glRotatef(math.degrees(TILT_SATURN), +0.0, +0.0, +1.0)
 
-    # Self-spin
+    # Self-spin (planet body)
     glPushMatrix()
     glRotatef(math.degrees(angle_saturn_spin), +0.0, +1.0, +0.0)
     glColor3f(+1.0, +1.0, +1.0)
     glCallList(dl_saturn)
     glPopMatrix()
 
-    # Ring (stays in the equatorial plane -- does not spin with the planet)
+    # Ring -- rotates at its own mean Keplerian rate in the equatorial plane
+    glPushMatrix()
+    glRotatef(math.degrees(angle_saturn_ring), +0.0, +1.0, +0.0)
     glColor4f(+1.0, +1.0, +1.0, +0.85)
     glCallList(dl_saturn_ring)
+    glPopMatrix()
 
     glPopMatrix()
 
@@ -846,7 +856,7 @@ def draw_saturn():
 
 def init_gl():
     """One-time GL state: background colour, depth test, projection."""
-    glClearColor(+0.0, +0.0, +0.0, +0.0)  # black -- the void of space
+    glClearColor(+0.0, +0.0, +0.0, +0.0)
     glClearDepth(+1.0)
     glDepthFunc(GL_LESS)
     glEnable(GL_DEPTH_TEST)
@@ -891,7 +901,7 @@ def update_angles():
     global angle_moon_orb
     global angle_mars_orb, angle_mars_spin
     global angle_jupiter_orb, angle_jupiter_spin
-    global angle_saturn_orb, angle_saturn_spin
+    global angle_saturn_orb, angle_saturn_spin, angle_saturn_ring
     global angle_uranus_orb, angle_uranus_spin
     global angle_neptune_orb, angle_neptune_spin
     global cam_yaw, cam_pitch, cam_dist
@@ -937,8 +947,9 @@ def update_angles():
     angle_jupiter_spin = (angle_jupiter_spin  + W_JUPITER_SPIN  * dt) % TWO_PI
 
     # Saturn
-    angle_saturn_orb  = (angle_saturn_orb  + W_SATURN_ORBIT * dt) % TWO_PI
-    angle_saturn_spin = (angle_saturn_spin  + W_SATURN_SPIN  * dt) % TWO_PI
+    angle_saturn_orb  = (angle_saturn_orb  + W_SATURN_ORBIT     * dt) % TWO_PI
+    angle_saturn_spin = (angle_saturn_spin + W_SATURN_SPIN      * dt) % TWO_PI
+    angle_saturn_ring = (angle_saturn_ring + W_SATURN_RING_SPIN * dt) % TWO_PI
 
     # Uranus
     angle_uranus_orb  = (angle_uranus_orb  + W_URANUS_ORBIT * dt) % TWO_PI
@@ -1017,7 +1028,7 @@ def display():
 
     # -- Milky Way backdrop (furthest layer, no lighting) ----------------
     glDisable(GL_LIGHTING)
-    glDisable(GL_DEPTH_TEST)             # always behind everything
+    glDisable(GL_DEPTH_TEST)
     glColor3f(+1.0, +1.0, +1.0)
     glCallList(dl_milky_way)
     glEnable(GL_DEPTH_TEST)
@@ -1039,14 +1050,14 @@ def display():
     glRotatef(math.degrees(angle_sun_spin), +0.0, +1.0, +0.0)
     glColor3f(+1.0, +1.0, +1.0)
     glCallList(dl_sun)
-    glMaterialfv(GL_FRONT, GL_EMISSION, [+0.0, +0.0, +0.0, +1.0])  # reset
+    glMaterialfv(GL_FRONT, GL_EMISSION, [+0.0, +0.0, +0.0, +1.0])
     glPopMatrix()
 
     # -- Sun glow / corona (additive semi-transparent layers) -----------
     glDisable(GL_LIGHTING)
     glDisable(GL_TEXTURE_2D)
     glEnable(GL_BLEND)
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE)  # additive blending for glow
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE)
     glDepthMask(GL_FALSE)
 
     glow_layers = [
