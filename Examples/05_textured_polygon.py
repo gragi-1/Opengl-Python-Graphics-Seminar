@@ -27,7 +27,7 @@ N_SIDES = 13          # Number of sides of the regular polygon
 RADIUS = 1.2          # Radius of the polygon in world units
 TEXTURE_PATH = "img/box.jpg"
 USE_REPEAT = True     # True -> GL_REPEAT (tile); False -> GL_CLAMP_TO_EDGE
-COORD_SCALE = 2.0     # Multiplier for texture coords; > 1.0 goes outside [0, 1]
+COORD_SCALE = 0.5     # Multiplier for texture coords; > 1.0 goes outside [0, 1]
 
 # -- Texture data (populated by load_texture) -----------------------------------
 tex_width = None

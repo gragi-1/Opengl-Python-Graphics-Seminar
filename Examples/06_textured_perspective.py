@@ -26,7 +26,7 @@ NEAR_PLANE = 0.1          # Distance to the near clipping plane
 FAR_PLANE = 100.0         # Distance to the far clipping plane
 WINDOW_W = 750
 WINDOW_H = 750
-ROTATION_SPEED = math.pi / 6.0  # Rotation speed: pi/6 rad/s (~ 30deg/s)
+ROTATION_SPEED = math.pi / 10.0  # Rotation speed: pi/10 rad/s (~ 18deg/s)
 
 # -- Geometry (square lying in the XY plane, z = 0) ----------------------------
 quad_texcoords = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]
@@ -54,8 +54,8 @@ def init():
     glEnable(GL_DEPTH_TEST)                  # Enable depth testing
 
     # Texture filtering and wrap mode
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
 
@@ -65,6 +65,8 @@ def init():
         tex_w, tex_h, 0,
         GL_RGBA, GL_UNSIGNED_BYTE, tex_bytes,
     )
+
+    glGenerateMipmap(GL_TEXTURE_2D)
 
 
 def reshape(w, h):
